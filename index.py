@@ -3,64 +3,64 @@ import subprocess
 from datetime import datetime
 import re
 
-def tisztit_fajlnev(fajlnev):
-    return re.sub(r'[\\/*?:"<>|]', "_", fajlnev)
+def sanitize_filename(filename):
+    return re.sub(r'[\\/*?:"<>|]', "_", filename)
 
-def video_letoltes():
-    url = input("Add meg a videó URL-jét: ")
-    print("\nOpciók:")
-    print("1: Videó letöltése a legjobb minőségben hanggal")
-    print("2: Hang letöltése videó nélkül a legjobb minőségben")
-    print("3: Videó letöltése hang nélkül a legjobb minőségben")
+def download_video():
+    url = input("Enter the video URL: ")
+    print("\nOptions:")
+    print("1: Download video with audio in best quality")
+    print("2: Download audio only in best quality")
+    print("3: Download video without audio in best quality")
     
-    valasztas = input("\nVálaszd ki a letöltési módot (1/2/3): ")
+    choice = input("\nSelect download mode (1/2/3): ")
 
     try:
-        print("\nVideó metaadatok lekérése...")
+        print("\nFetching video metadata...")
         result = subprocess.run(
             ["yt-dlp", "--get-title", "--get-id", url],
             capture_output=True,
             text=True,
             check=True
         )
-        cim, video_id = result.stdout.splitlines()
-        tisztitott_cim = tisztit_fajlnev(cim)
-        print(f"\nVideó címe: {cim}")
+        title, video_id = result.stdout.splitlines()
+        sanitized_title = sanitize_filename(title)
+        print(f"\nVideo title: {title}")
     except subprocess.CalledProcessError as e:
-        print(f"\nHiba történt a metaadatok lekérése során: {e}")
+        print(f"\nError occurred while fetching metadata: {e}")
         return
     
-    idobelyeg = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    kimeneti_mappa = f"{tisztitott_cim}_{video_id}_{idobelyeg}"
-    os.makedirs(kimeneti_mappa, exist_ok=True)
-    print(f"\nLetöltési mappa létrehozva: {kimeneti_mappa}")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_dir = f"{sanitized_title}_{video_id}_{timestamp}"
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"\nDownload folder created: {output_dir}")
     
-    if valasztas == "1":
-        parancs = f'yt-dlp -f "bestvideo+bestaudio/best" -o "{kimeneti_mappa}/%(title)s.%(ext)s" "{url}"'
-        print("\nVideó letöltése hanggal...")
-    elif valasztas == "2":
-        parancs = f'yt-dlp -f "bestaudio/best" --extract-audio --audio-format mp3 -o "{kimeneti_mappa}/%(title)s.%(ext)s" "{url}"'
-        print("\nCsak a hang letöltése...")
-    elif valasztas == "3":
-        parancs = f'yt-dlp -f "bestvideo[ext=mp4]" -o "{kimeneti_mappa}/%(title)s.%(ext)s" "{url}"'
-        print("\nVideó letöltése hang nélkül...")
+    if choice == "1":
+        command = f'yt-dlp -f "bestvideo+bestaudio/best" -o "{output_dir}/%(title)s.%(ext)s" "{url}"'
+        print("\nDownloading video with audio...")
+    elif choice == "2":
+        command = f'yt-dlp -f "bestaudio/best" --extract-audio --audio-format mp3 -o "{output_dir}/%(title)s.%(ext)s" "{url}"'
+        print("\nDownloading audio only...")
+    elif choice == "3":
+        command = f'yt-dlp -f "bestvideo[ext=mp4]" -o "{output_dir}/%(title)s.%(ext)s" "{url}"'
+        print("\nDownloading video without audio...")
     else:
-        print("\nÉrvénytelen választás! Próbáld újra.")
+        print("\nInvalid choice! Please try again.")
         return
 
     try:
-        subprocess.run(parancs, shell=True, check=True)
-        print("\nLetöltés sikeres!")
+        subprocess.run(command, shell=True, check=True)
+        print("\nDownload successful!")
     except subprocess.CalledProcessError as e:
-        print(f"\nHiba történt a letöltés során: {e}")
+        print(f"\nError occurred during download: {e}")
     
-    with open(f"{kimeneti_mappa}/letoltesi_naplo.txt", "w", encoding="utf-8") as naplo:
-        naplo.write(f"Letöltési URL: {url}\n")
-        naplo.write(f"Letöltési mappa: {kimeneti_mappa}\n")
-        naplo.write(f"Videó címe: {cim}\n")
-        naplo.write(f"Videó azonosítója: {video_id}\n")
-        naplo.write(f"Letöltés ideje: {idobelyeg}\n")
-    print(f"\nLetöltési információk naplózva: {kimeneti_mappa}/letoltesi_naplo.txt")
+    with open(f"{output_dir}/download_log.txt", "w", encoding="utf-8") as log_file:
+        log_file.write(f"Download URL: {url}\n")
+        log_file.write(f"Download folder: {output_dir}\n")
+        log_file.write(f"Video title: {title}\n")
+        log_file.write(f"Video ID: {video_id}\n")
+        log_file.write(f"Download time: {timestamp}\n")
+    print(f"\nDownload information logged: {output_dir}/download_log.txt")
 
 if __name__ == "__main__":
-    video_letoltes()
+    download_video()
